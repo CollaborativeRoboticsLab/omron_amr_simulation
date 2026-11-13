@@ -62,6 +62,7 @@ def randomize_grasp_objects(root, seed=None):
 
 def create_preview(context):
     model = LaunchConfiguration('model').perform(context)
+    fixed_base_control = evaluate_condition_expression(context, [LaunchConfiguration('fixed_base_control')])
     world_name = LaunchConfiguration('world').perform(context)
     worlds = {
         'empty': (os.path.join(get_package_share_directory('omron_amr_simulation'), 'worlds', 'empty.sdf'), 'empty'),
@@ -92,7 +93,34 @@ def create_preview(context):
         for plugin in gazebo.findall('plugin'):
             if plugin.get('filename') == 'libgazebo_ros_control.so':
                 gazebo.remove(plugin)
-    ET.SubElement(ET.SubElement(root, 'gazebo'), 'static').text = 'true'
+    gripper_joints = ('gripper_planar_4', 'gripper_planar_5')
+    if fixed_base_control:
+        if model != 'ld250_tm12x':
+            raise ValueError('fixed_base_control is only supported for ld250_tm12x')
+        controllers = LaunchConfiguration('controller_config').perform(context)
+        if not controllers:
+            raise ValueError('controller_config is required for fixed_base_control')
+        ET.SubElement(root, 'link', {'name': 'world'})
+        anchor = ET.SubElement(root, 'joint', {'name': 'simulation_world_anchor', 'type': 'fixed'})
+        ET.SubElement(anchor, 'parent', {'link': 'world'})
+        ET.SubElement(anchor, 'child', {'link': 'base_link'})
+        control = ET.SubElement(root, 'ros2_control', {'name': 'GazeboSimSystem', 'type': 'system'})
+        ET.SubElement(ET.SubElement(control, 'hardware'), 'plugin').text = 'gz_ros2_control/GazeboSimSystem'
+        joints = [f'joint_{number}' for number in range(1, 7)]
+        available_joints = {joint.get('name') for joint in root.findall('joint')}
+        joints.extend(name for name in gripper_joints if name in available_joints)
+        for name in joints:
+            joint = ET.SubElement(control, 'joint', {'name': name})
+            ET.SubElement(joint, 'command_interface', {'name': 'position'})
+            ET.SubElement(joint, 'state_interface', {'name': 'position'})
+            ET.SubElement(joint, 'state_interface', {'name': 'velocity'})
+        plugin = ET.SubElement(ET.SubElement(root, 'gazebo'), 'plugin', {
+            'filename': 'libgz_ros2_control-system.so',
+            'name': 'gz_ros2_control::GazeboSimROS2ControlPlugin',
+        })
+        ET.SubElement(plugin, 'parameters').text = controllers
+    else:
+        ET.SubElement(ET.SubElement(root, 'gazebo'), 'static').text = 'true'
     description = ET.tostring(root, encoding='unicode')
     gazebo_root = copy.deepcopy(root)
     for visual in gazebo_root.findall('.//visual'):
@@ -129,7 +157,7 @@ def create_preview(context):
             OpaqueFunction(function=lambda context, directory=temporary_world: directory.cleanup())
         ])))
 
-    return cleanup + [
+    nodes = [
         SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.pathsep.join(resource_paths)),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gazebo_launch),
@@ -140,13 +168,22 @@ def create_preview(context):
              arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'], output='screen'),
         Node(package='robot_state_publisher', executable='robot_state_publisher',
              parameters=[{'robot_description': description, 'use_sim_time': True}], output='screen'),
-        Node(package='joint_state_publisher', executable='joint_state_publisher',
-             parameters=[{'use_sim_time': True}], output='screen'),
         Node(package='ros_gz_sim', executable='create',
              arguments=['-world', gazebo_world, '-name', model, '-string', gazebo_description,
                      '-x', LaunchConfiguration('x'), '-y', LaunchConfiguration('y'),
                      '-z', LaunchConfiguration('z'), '-Y', LaunchConfiguration('yaw')], output='screen'),
     ]
+    if fixed_base_control:
+        for controller in ('joint_state_broadcaster', 'tmr_arm_with_base_controller'):
+            nodes.append(Node(package='controller_manager', executable='spawner',
+                              arguments=[controller, '--controller-manager-timeout', '120'], output='screen'))
+        if all(name in available_joints for name in gripper_joints):
+            nodes.append(Node(package='controller_manager', executable='spawner',
+                              arguments=['gripper_position_controller', '--controller-manager-timeout', '120'], output='screen'))
+    else:
+        nodes.append(Node(package='joint_state_publisher', executable='joint_state_publisher',
+                          parameters=[{'use_sim_time': True}], output='screen'))
+    return cleanup + nodes
 
 
 def generate_launch_description():
@@ -157,6 +194,8 @@ def generate_launch_description():
         DeclareLaunchArgument('box_seed', default_value='', description='Optional seed for warehouse box positions'),
         DeclareLaunchArgument('randomize_objects', default_value='false', description='Randomize grasp-test object positions'),
         DeclareLaunchArgument('object_seed', default_value='', description='Optional seed for grasp-test object positions'),
+        DeclareLaunchArgument('fixed_base_control', default_value='false', description='Enable fixed-base Gazebo arm control'),
+        DeclareLaunchArgument('controller_config', default_value='', description='ROS 2 controller configuration file'),
         DeclareLaunchArgument('x', default_value='0.0', description='Spawn X position in meters'),
         DeclareLaunchArgument('y', default_value='0.0', description='Spawn Y position in meters'),
         DeclareLaunchArgument('z', default_value='0.0', description='Spawn Z position in meters'),
