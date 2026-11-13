@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <world name="industrial-warehouse">
+    <physics name="default" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+
+    <light name="warehouse_light_1" type="point">
+      <pose>0 0 8.5 0 0 0</pose><diffuse>0.8 0.8 0.8 1</diffuse>
+      <attenuation><range>35</range><constant>0.5</constant><linear>0.02</linear><quadratic>0.001</quadratic></attenuation>
+    </light>
+    <light name="warehouse_light_2" type="point">
+      <pose>14 0 8.5 0 0 0</pose><diffuse>0.8 0.8 0.8 1</diffuse>
+      <attenuation><range>35</range><constant>0.5</constant><linear>0.02</linear><quadratic>0.001</quadratic></attenuation>
+    </light>
+
+    <include><name>floor_1</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_GroundB_01</uri><pose>0 0 -0.090092 0 0 0</pose></include>
+    <include><name>floor_2</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_GroundB_01</uri><pose>14 0 -0.090092 0 0 3.141592653589793</pose></include>
+
+    <model name="warehouse_perimeter">
+      <static>true</static>
+      <link name="walls">
+        <collision name="west"><pose>-7 0 4.5 0 0 0</pose><geometry><box><size>0.2 21 9</size></box></geometry></collision>
+        <visual name="west"><pose>-7 0 4.5 0 0 0</pose><geometry><box><size>0.2 21 9</size></box></geometry><material><ambient>0.48 0.5 0.52 1</ambient><diffuse>0.65 0.67 0.68 1</diffuse></material></visual>
+        <collision name="east"><pose>21 0 4.5 0 0 0</pose><geometry><box><size>0.2 21 9</size></box></geometry></collision>
+        <visual name="east"><pose>21 0 4.5 0 0 0</pose><geometry><box><size>0.2 21 9</size></box></geometry><material><ambient>0.48 0.5 0.52 1</ambient><diffuse>0.65 0.67 0.68 1</diffuse></material></visual>
+        <collision name="north"><pose>7 10.5 4.5 0 0 0</pose><geometry><box><size>28 0.2 9</size></box></geometry></collision>
+        <visual name="north"><pose>7 10.5 4.5 0 0 0</pose><geometry><box><size>28 0.2 9</size></box></geometry><material><ambient>0.48 0.5 0.52 1</ambient><diffuse>0.65 0.67 0.68 1</diffuse></material></visual>
+        <collision name="south_left"><pose>-1 -10.5 4.5 0 0 0</pose><geometry><box><size>12 0.2 9</size></box></geometry></collision>
+        <visual name="south_left"><pose>-1 -10.5 4.5 0 0 0</pose><geometry><box><size>12 0.2 9</size></box></geometry><material><ambient>0.48 0.5 0.52 1</ambient><diffuse>0.65 0.67 0.68 1</diffuse></material></visual>
+        <collision name="south_right"><pose>15 -10.5 4.5 0 0 0</pose><geometry><box><size>12 0.2 9</size></box></geometry></collision>
+        <visual name="south_right"><pose>15 -10.5 4.5 0 0 0</pose><geometry><box><size>12 0.2 9</size></box></geometry><material><ambient>0.48 0.5 0.52 1</ambient><diffuse>0.65 0.67 0.68 1</diffuse></material></visual>
+        <collision name="entrance_header"><pose>7 -10.5 7 0 0 0</pose><geometry><box><size>4 0.2 4</size></box></geometry></collision>
+        <visual name="entrance_header"><pose>7 -10.5 7 0 0 0</pose><geometry><box><size>4 0.2 4</size></box></geometry><material><ambient>0.48 0.5 0.52 1</ambient><diffuse>0.65 0.67 0.68 1</diffuse></material></visual>
+      </link>
+    </model>
+
+    <include><name>shelf_f_1</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfF_01</uri><pose>-5.795 -0.957 0 0 0 0</pose></include>
+    <include><name>shelf_f_2</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfF_01</uri><pose>19.795 0.957 0 0 0 3.141592653589793</pose></include>
+    <include><name>shelf_e_1</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfE_01</uri><pose>4.2 -7.743 0 0 0 0</pose></include>
+    <include><name>shelf_e_2</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfE_01</uri><pose>4.2 -4.646 0 0 0 0</pose></include>
+    <include><name>shelf_e_3</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfE_01</uri><pose>4.2 -1.549 0 0 0 0</pose></include>
+    <include><name>shelf_e_4</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfE_01</uri><pose>9.8 7.743 0 0 0 3.141592653589793</pose></include>
+    <include><name>shelf_e_5</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfE_01</uri><pose>9.8 4.646 0 0 0 3.141592653589793</pose></include>
+    <include><name>shelf_e_6</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfE_01</uri><pose>9.8 1.549 0 0 0 3.141592653589793</pose></include>
+    <include><name>shelf_d_1</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>4.2 1.549 0 0 0 0</pose></include>
+    <include><name>shelf_d_2</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>4.2 4.646 0 0 0 0</pose></include>
+    <include><name>shelf_d_3</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>4.2 7.743 0 0 0 0</pose></include>
+    <include><name>shelf_d_4</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>9.8 -1.549 0 0 0 3.141592653589793</pose></include>
+    <include><name>shelf_d_5</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>9.8 -4.646 0 0 0 3.141592653589793</pose></include>
+    <include><name>shelf_d_6</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>9.8 -7.743 0 0 0 3.141592653589793</pose></include>
+    <include><name>pallet_jack</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_PalletJackB_01</uri><pose>-0.276 -9.482 0.023 0 0 0</pose></include>
+  </world>
+</sdf>
