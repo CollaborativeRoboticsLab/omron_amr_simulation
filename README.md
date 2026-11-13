@@ -56,17 +56,22 @@ For a simple grasp-testing environment, launch the separate world:
 ros2 launch omron_amr_simulation preview.launch.py model:=ld250 world:=grasp_test
 ```
 
-The grasp-test world includes a worktable at `(1.3, 0)` and two independent dynamic
-objects: `sample_box` (80 mm cube, 0.2 kg) and `sample_cylinder` (60 mm
-diameter, 100 mm tall, 0.15 kg). They have collision geometry and respond to
-gravity and contact; they are not attached to the table. Their dimensions and
-mass are example values, not verified gripper specifications.
+The grasp-test world includes five worktables at `x=1.3`, with `y` positions
+from -4 to 4 meters in 2 meter steps. Each table holds five dynamic objects:
+a cube, cylinder, sphere, rectangular block, and bottle. They have collision
+geometry and respond to gravity and contact; they are not attached to the
+tables. Their dimensions and masses are example values, not verified gripper
+specifications.
+
+Object positions are fixed by default. Use `randomize_objects:=true` to shuffle
+the five objects on each table at startup, and optionally `object_seed:=42` to
+reproduce the layout. The seed has no effect when randomization is disabled.
 
 The reusable models are in `omron_amr_simulation/models`. Add more instances
-to a world SDF using `model://manipulation_box` or
-`model://manipulation_cylinder`, unique names, and desired poses. The preview
+to a world SDF using the `model://manipulation_*` models, unique names, and
+desired poses. The preview
 adds that model directory to Gazebo's resource path. The default empty world
-contains no objects; the grasp-test worktable and its objects are separate
+contains no objects; the grasp-test tables and their objects are separate
 from the warehouse rack.
 
 The robot remains static in this preview, so it cannot yet drive, close its
