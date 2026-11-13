@@ -62,7 +62,7 @@ def randomize_grasp_objects(root, seed=None):
 
 def create_preview(context):
     model = LaunchConfiguration('model').perform(context)
-    fixed_base_control = evaluate_condition_expression(context, [LaunchConfiguration('fixed_base_control')])
+    world_only = evaluate_condition_expression(context, [LaunchConfiguration('world_only')])
     world_name = LaunchConfiguration('world').perform(context)
     worlds = {
         'empty': (os.path.join(get_package_share_directory('omron_amr_simulation'), 'worlds', 'empty.sdf'), 'empty'),
@@ -72,72 +72,37 @@ def create_preview(context):
     if world_name not in worlds:
         raise ValueError(f'Unsupported world: {world_name}; choose {", ".join(worlds)}')
     world, gazebo_world = worlds[world_name]
-    descriptions = {
-        'ld90': ('omron_amr_simulation', 'urdf/ld90.urdf.xacro'),
-        'ld250': ('omron_amr_simulation', 'urdf/ld250.urdf.xacro'),
-        'ld250_tm12x': ('moma_description', 'xacro/ld250_tm12x.urdf.xacro'),
-    }
-    if model not in descriptions:
-        raise ValueError(f'Unsupported model: {model}; choose {", ".join(descriptions)}')
-
-    package, relative_path = descriptions[model]
-    description_package = LaunchConfiguration('description_package').perform(context)
-    description_file = LaunchConfiguration('description_file').perform(context)
-    if bool(description_package) != bool(description_file):
-        raise ValueError('description_package and description_file must be specified together')
-    if description_package:
-        package, relative_path = description_package, description_file
-    description_path = os.path.join(get_package_share_directory(package), relative_path)
-    root = ET.fromstring(xacro.process_file(description_path).toxml())
-    for gazebo in root.findall('gazebo'):
-        for plugin in gazebo.findall('plugin'):
-            if plugin.get('filename') == 'libgazebo_ros_control.so':
-                gazebo.remove(plugin)
-    gripper_joints = ('gripper_planar_4', 'gripper_planar_5')
-    if fixed_base_control:
-        if model != 'ld250_tm12x':
-            raise ValueError('fixed_base_control is only supported for ld250_tm12x')
-        controllers = LaunchConfiguration('controller_config').perform(context)
-        if not controllers:
-            raise ValueError('controller_config is required for fixed_base_control')
-        ET.SubElement(root, 'link', {'name': 'world'})
-        anchor = ET.SubElement(root, 'joint', {'name': 'simulation_world_anchor', 'type': 'fixed'})
-        ET.SubElement(anchor, 'parent', {'link': 'world'})
-        ET.SubElement(anchor, 'child', {'link': 'base_link'})
-        control = ET.SubElement(root, 'ros2_control', {'name': 'GazeboSimSystem', 'type': 'system'})
-        ET.SubElement(ET.SubElement(control, 'hardware'), 'plugin').text = 'gz_ros2_control/GazeboSimSystem'
-        joints = [f'joint_{number}' for number in range(1, 7)]
-        available_joints = {joint.get('name') for joint in root.findall('joint')}
-        joints.extend(name for name in gripper_joints if name in available_joints)
-        for name in joints:
-            joint = ET.SubElement(control, 'joint', {'name': name})
-            ET.SubElement(joint, 'command_interface', {'name': 'position'})
-            ET.SubElement(joint, 'state_interface', {'name': 'position'})
-            ET.SubElement(joint, 'state_interface', {'name': 'velocity'})
-        plugin = ET.SubElement(ET.SubElement(root, 'gazebo'), 'plugin', {
-            'filename': 'libgz_ros2_control-system.so',
-            'name': 'gz_ros2_control::GazeboSimROS2ControlPlugin',
-        })
-        ET.SubElement(plugin, 'parameters').text = controllers
-    else:
-        ET.SubElement(ET.SubElement(root, 'gazebo'), 'static').text = 'true'
-    description = ET.tostring(root, encoding='unicode')
-    gazebo_root = copy.deepcopy(root)
-    for visual in gazebo_root.findall('.//visual'):
-        mesh = visual.find('geometry/mesh')
-        material = visual.find('material')
-        if mesh is not None and mesh.get('filename', '').lower().endswith('.obj') and material is not None:
-            visual.remove(material)
-    gazebo_description = ET.tostring(gazebo_root, encoding='unicode')
-
     resource_packages = set()
-    for mesh in root.findall('.//mesh'):
-        filename = mesh.get('filename', '')
-        if filename.startswith('package://'):
-            resource_packages.add(filename[len('package://'):].split('/', 1)[0])
+    if not world_only:
+        descriptions = {
+            'ld90': ('omron_amr_simulation', 'urdf/ld90.urdf.xacro'),
+            'ld250': ('omron_amr_simulation', 'urdf/ld250.urdf.xacro'),
+        }
+        if model not in descriptions:
+            raise ValueError(f'Unsupported model: {model}; choose {", ".join(descriptions)}')
+        package, relative_path = descriptions[model]
+        description_path = os.path.join(get_package_share_directory(package), relative_path)
+        root = ET.fromstring(xacro.process_file(description_path).toxml())
+        for gazebo in root.findall('gazebo'):
+            for plugin in gazebo.findall('plugin'):
+                if plugin.get('filename') == 'libgazebo_ros_control.so':
+                    gazebo.remove(plugin)
+        ET.SubElement(ET.SubElement(root, 'gazebo'), 'static').text = 'true'
+        description = ET.tostring(root, encoding='unicode')
+        gazebo_root = copy.deepcopy(root)
+        for visual in gazebo_root.findall('.//visual'):
+            mesh = visual.find('geometry/mesh')
+            material = visual.find('material')
+            if mesh is not None and mesh.get('filename', '').lower().endswith('.obj') and material is not None:
+                visual.remove(material)
+        gazebo_description = ET.tostring(gazebo_root, encoding='unicode')
+        for mesh in root.findall('.//mesh'):
+            filename = mesh.get('filename', '')
+            if filename.startswith('package://'):
+                resource_packages.add(filename[len('package://'):].split('/', 1)[0])
     resource_paths = [os.path.dirname(get_package_share_directory(name)) for name in sorted(resource_packages)]
     resource_paths.append(os.path.join(get_package_share_directory('omron_amr_simulation'), 'models'))
-    resource_paths.append(os.environ.get('GZ_SIM_RESOURCE_PATH', ''))
+    resource_paths.append(context.environment.get('GZ_SIM_RESOURCE_PATH', ''))
     gazebo_launch = os.path.join(get_package_share_directory('ros_gz_sim'), 'launch', 'gz_sim.launch.py')
 
     cleanup = []
@@ -166,42 +131,34 @@ def create_preview(context):
         ExecuteProcess(cmd=['gz', 'sim', '-g'], output='screen', condition=IfCondition(LaunchConfiguration('gui'))),
         Node(package='ros_gz_bridge', executable='parameter_bridge',
              arguments=['/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'], output='screen'),
-        Node(package='robot_state_publisher', executable='robot_state_publisher',
-             parameters=[{'robot_description': description, 'use_sim_time': True}], output='screen'),
-        Node(package='ros_gz_sim', executable='create',
-             arguments=['-world', gazebo_world, '-name', model, '-string', gazebo_description,
-                     '-x', LaunchConfiguration('x'), '-y', LaunchConfiguration('y'),
-                     '-z', LaunchConfiguration('z'), '-Y', LaunchConfiguration('yaw')], output='screen'),
     ]
-    if fixed_base_control:
-        for controller in ('joint_state_broadcaster', 'tmr_arm_with_base_controller'):
-            nodes.append(Node(package='controller_manager', executable='spawner',
-                              arguments=[controller, '--controller-manager-timeout', '120'], output='screen'))
-        if all(name in available_joints for name in gripper_joints):
-            nodes.append(Node(package='controller_manager', executable='spawner',
-                              arguments=['gripper_position_controller', '--controller-manager-timeout', '120'], output='screen'))
-    else:
-        nodes.append(Node(package='joint_state_publisher', executable='joint_state_publisher',
-                          parameters=[{'use_sim_time': True}], output='screen'))
+    if not world_only:
+        nodes.extend([
+            Node(package='robot_state_publisher', executable='robot_state_publisher',
+                 parameters=[{'robot_description': description, 'use_sim_time': True}], output='screen'),
+            Node(package='joint_state_publisher', executable='joint_state_publisher',
+                 parameters=[{'use_sim_time': True}], output='screen'),
+            Node(package='ros_gz_sim', executable='create',
+                 arguments=['-world', gazebo_world, '-name', model, '-string', gazebo_description,
+                            '-x', LaunchConfiguration('x'), '-y', LaunchConfiguration('y'),
+                            '-z', LaunchConfiguration('z'), '-Y', LaunchConfiguration('yaw')], output='screen'),
+        ])
     return cleanup + nodes
 
 
 def generate_launch_description():
     return LaunchDescription([
-        DeclareLaunchArgument('model', default_value='ld250', description='ld90, ld250, or ld250_tm12x'),
+        DeclareLaunchArgument('model', default_value='ld250', description='ld90 or ld250'),
+        DeclareLaunchArgument('world_only', default_value='false', description='Start the world without a robot'),
         DeclareLaunchArgument('world', default_value='empty', description='empty, grasp_test, or warehouse'),
         DeclareLaunchArgument('randomize_boxes', default_value='false', description='Randomize warehouse box positions'),
         DeclareLaunchArgument('box_seed', default_value='', description='Optional seed for warehouse box positions'),
         DeclareLaunchArgument('randomize_objects', default_value='false', description='Randomize grasp-test object positions'),
         DeclareLaunchArgument('object_seed', default_value='', description='Optional seed for grasp-test object positions'),
-        DeclareLaunchArgument('fixed_base_control', default_value='false', description='Enable fixed-base Gazebo arm control'),
-        DeclareLaunchArgument('controller_config', default_value='', description='ROS 2 controller configuration file'),
         DeclareLaunchArgument('x', default_value='0.0', description='Spawn X position in meters'),
         DeclareLaunchArgument('y', default_value='0.0', description='Spawn Y position in meters'),
         DeclareLaunchArgument('z', default_value='0.0', description='Spawn Z position in meters'),
         DeclareLaunchArgument('yaw', default_value='0.0', description='Spawn yaw in radians'),
         DeclareLaunchArgument('gui', default_value='true', description='Start the Gazebo graphical client'),
-        DeclareLaunchArgument('description_package', default_value='', description='Package containing an alternate robot Xacro'),
-        DeclareLaunchArgument('description_file', default_value='', description='Xacro path relative to the description package'),
         OpaqueFunction(function=create_preview),
     ])
