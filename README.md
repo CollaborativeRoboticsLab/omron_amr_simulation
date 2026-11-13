@@ -38,6 +38,42 @@ models on first use, which requires network access and can take time.
 The default world remains `empty`. Set `x`, `y`, `z` (meters) and `yaw` (radians)
 to choose a spawn pose; all default to zero.
 
+The warehouse also has three open racks near `(-2.7, 0)` with 20 dynamic
+120 mm boxes: four each in blue, red, green, black, and brown. Each weighs
+0.35 kg and is an independent collision object. The existing Fuel shelf
+contents remain part of their static shelf meshes.
+
+Box positions are fixed by default. Set `randomize_boxes:=true` to distribute
+them randomly across the racks at startup. Add `box_seed:=42` (or another seed)
+to reproduce a randomized layout; the seed has no effect when randomization is
+disabled.
+
+### Manipulation objects
+
+For a simple grasp-testing environment, launch the separate world:
+
+```bash
+ros2 launch omron_amr_simulation preview.launch.py model:=ld250 world:=grasp_test
+```
+
+The grasp-test world includes a worktable at `(1.3, 0)` and two independent dynamic
+objects: `sample_box` (80 mm cube, 0.2 kg) and `sample_cylinder` (60 mm
+diameter, 100 mm tall, 0.15 kg). They have collision geometry and respond to
+gravity and contact; they are not attached to the table. Their dimensions and
+mass are example values, not verified gripper specifications.
+
+The reusable models are in `omron_amr_simulation/models`. Add more instances
+to a world SDF using `model://manipulation_box` or
+`model://manipulation_cylinder`, unique names, and desired poses. The preview
+adds that model directory to Gazebo's resource path. The default empty world
+contains no objects; the grasp-test worktable and its objects are separate
+from the warehouse rack.
+
+The robot remains static in this preview, so it cannot yet drive, close its
+gripper, or pick up the objects. Grasping requires robot and gripper dynamics,
+controllers, and validated contact behavior; vacuum gripping also needs a
+suction simulation mechanism.
+
 ## Reuse and remaining work
 
 - The existing `amr_description` Xacros provide the chassis geometry and, for

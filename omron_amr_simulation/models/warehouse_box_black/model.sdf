@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="warehouse_box_black">
+    <static>false</static>
+    <link name="body">
+      <inertial><mass>0.35</mass><inertia><ixx>0.00084</ixx><iyy>0.00084</iyy><izz>0.00084</izz></inertia></inertial>
+      <collision name="collision"><geometry><box><size>0.12 0.12 0.12</size></box></geometry></collision>
+      <visual name="visual"><geometry><box><size>0.12 0.12 0.12</size></box></geometry><material><ambient>0.025 0.025 0.025 1</ambient><diffuse>0.07 0.07 0.07 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>

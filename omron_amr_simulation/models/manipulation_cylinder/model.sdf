@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="manipulation_cylinder">
+    <static>false</static>
+    <link name="body">
+      <inertial>
+        <mass>0.15</mass>
+        <inertia><ixx>0.00015875</ixx><iyy>0.00015875</iyy><izz>0.0000675</izz></inertia>
+      </inertial>
+      <collision name="collision"><geometry><cylinder><radius>0.03</radius><length>0.10</length></cylinder></geometry></collision>
+      <visual name="visual"><geometry><cylinder><radius>0.03</radius><length>0.10</length></cylinder></geometry><material><ambient>0.52 0.19 0.08 1</ambient><diffuse>0.8 0.32 0.12 1</diffuse></material></visual>
+    </link>
+  </model>
+</sdf>

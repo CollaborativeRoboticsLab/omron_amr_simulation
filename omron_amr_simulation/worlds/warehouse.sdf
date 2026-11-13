@@ -54,5 +54,29 @@
     <include><name>shelf_d_5</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>9.8 -4.646 0 0 0 3.141592653589793</pose></include>
     <include><name>shelf_d_6</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_ShelfD_01</uri><pose>9.8 -7.743 0 0 0 3.141592653589793</pose></include>
     <include><name>pallet_jack</name><uri>https://fuel.ignitionrobotics.org/1.0/OpenRobotics/models/aws_robomaker_warehouse_PalletJackB_01</uri><pose>-0.276 -9.482 0.023 0 0 0</pose></include>
+
+    <include><name>movable_box_rack_1</name><uri>model://warehouse_rack</uri><pose>-2.7 -3 0 0 0 0</pose></include>
+    <include><name>movable_box_rack_2</name><uri>model://warehouse_rack</uri><pose>-2.7 0 0 0 0 0</pose></include>
+    <include><name>movable_box_rack_3</name><uri>model://warehouse_rack</uri><pose>-2.7 3 0 0 0 0</pose></include>
+    <include><name>warehouse_box_blue_1</name><uri>model://warehouse_box_blue</uri><pose>-2.7 -3.8 0.44 0 0 0</pose></include>
+    <include><name>warehouse_box_blue_2</name><uri>model://warehouse_box_blue</uri><pose>-2.7 -3.4 0.44 0 0 0</pose></include>
+    <include><name>warehouse_box_blue_3</name><uri>model://warehouse_box_blue</uri><pose>-2.7 3 0.44 0 0 0</pose></include>
+    <include><name>warehouse_box_blue_4</name><uri>model://warehouse_box_blue</uri><pose>-2.7 0.4 0.44 0 0 0</pose></include>
+    <include><name>warehouse_box_brown_1</name><uri>model://warehouse_box_brown</uri><pose>-2.7 3.8 0.44 0 0 0</pose></include>
+    <include><name>warehouse_box_red_1</name><uri>model://warehouse_box_red</uri><pose>-2.7 -3.8 0.79 0 0 0</pose></include>
+    <include><name>warehouse_box_red_2</name><uri>model://warehouse_box_red</uri><pose>-2.7 -3.4 0.79 0 0 0</pose></include>
+    <include><name>warehouse_box_red_3</name><uri>model://warehouse_box_red</uri><pose>-2.7 3 0.79 0 0 0</pose></include>
+    <include><name>warehouse_box_red_4</name><uri>model://warehouse_box_red</uri><pose>-2.7 0.4 0.79 0 0 0</pose></include>
+    <include><name>warehouse_box_brown_2</name><uri>model://warehouse_box_brown</uri><pose>-2.7 3.8 0.79 0 0 0</pose></include>
+    <include><name>warehouse_box_green_1</name><uri>model://warehouse_box_green</uri><pose>-2.7 -3.8 1.14 0 0 0</pose></include>
+    <include><name>warehouse_box_green_2</name><uri>model://warehouse_box_green</uri><pose>-2.7 -3.4 1.14 0 0 0</pose></include>
+    <include><name>warehouse_box_green_3</name><uri>model://warehouse_box_green</uri><pose>-2.7 3 1.14 0 0 0</pose></include>
+    <include><name>warehouse_box_green_4</name><uri>model://warehouse_box_green</uri><pose>-2.7 0.4 1.14 0 0 0</pose></include>
+    <include><name>warehouse_box_brown_3</name><uri>model://warehouse_box_brown</uri><pose>-2.7 0.8 1.14 0 0 0</pose></include>
+    <include><name>warehouse_box_black_1</name><uri>model://warehouse_box_black</uri><pose>-2.7 -3.8 1.49 0 0 0</pose></include>
+    <include><name>warehouse_box_black_2</name><uri>model://warehouse_box_black</uri><pose>-2.7 2.6 1.49 0 0 0</pose></include>
+    <include><name>warehouse_box_black_3</name><uri>model://warehouse_box_black</uri><pose>-2.7 0 1.49 0 0 0</pose></include>
+    <include><name>warehouse_box_black_4</name><uri>model://warehouse_box_black</uri><pose>-2.7 0.4 1.49 0 0 0</pose></include>
+    <include><name>warehouse_box_brown_4</name><uri>model://warehouse_box_brown</uri><pose>-2.7 0.8 1.49 0 0 0</pose></include>
   </world>
 </sdf>
