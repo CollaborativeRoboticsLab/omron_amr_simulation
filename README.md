@@ -24,6 +24,10 @@ and bridges Gazebo `/clock` to ROS. It sets the model static; no `/cmd_vel`,
 odometry, laser scans, Nav2, or hardware status is simulated. Run one preview per
 Gazebo world. Stop it with Ctrl+C.
 
+The physics backend defaults to `physics_engine:=dart`; `physics_engine:=bullet`
+selects Bullet Featherstone for experiments. Mobile drive behavior under Bullet
+is not validated.
+
 For a warehouse environment, use:
 
 ```bash

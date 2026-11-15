@@ -160,7 +160,13 @@ def create_preview(context):
         SetEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.pathsep.join(resource_paths)),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(gazebo_launch),
-            launch_arguments={'gz_args': f'-r -s {world}', 'on_exit_shutdown': 'true'}.items(),
+            launch_arguments={
+                'gz_args': f'-r -s {world} --physics-engine ' + {
+                    'dart': 'gz-physics-dartsim-plugin',
+                    'bullet': 'gz-physics-bullet-featherstone-plugin',
+                }[LaunchConfiguration('physics_engine').perform(context)],
+                'on_exit_shutdown': 'true',
+            }.items(),
         ),
         ExecuteProcess(cmd=['gz', 'sim', '-g'], output='screen', condition=IfCondition(LaunchConfiguration('gui'))),
         Node(package='ros_gz_bridge', executable='parameter_bridge',
@@ -190,6 +196,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('model', default_value='ld250', description='ld90 or ld250'),
         DeclareLaunchArgument('world_only', default_value='false', description='Start the world without a robot'),
+        DeclareLaunchArgument('physics_engine', default_value='dart', choices=['dart', 'bullet'],
+                      description='Gazebo physics backend'),
         DeclareLaunchArgument('drive', default_value='false', description='Enable experimental LD250 drive simulation'),
         DeclareLaunchArgument('lidar', default_value='false', description='Enable experimental LD250 laser scans'),
         DeclareLaunchArgument('render_sensors', default_value='false', description='Enable Gazebo rendering sensors in the world'),
