@@ -1,6 +1,8 @@
 import math
+import os
 import xml.etree.ElementTree as ET
 
+from ament_index_python.packages import get_package_share_directory
 from launch_ros.actions import Node
 
 
@@ -18,7 +20,7 @@ def add_lidars(root, prefixed_frames=False):
             ET.SubElement(joint, 'child', {'link': frame})
         sensor = ET.SubElement(gazebo, 'sensor', {'name': f'sim_{topic}', 'type': 'gpu_lidar'})
         ET.SubElement(sensor, 'pose').text = f'{position} 0 0 0'
-        ET.SubElement(sensor, 'topic').text = f'/{topic}'
+        ET.SubElement(sensor, 'topic').text = f'/sim_lidar/{topic}_raw'
         ET.SubElement(sensor, 'gz_frame_id').text = frame
         ET.SubElement(sensor, 'update_rate').text = '5'
         lidar = ET.SubElement(sensor, 'lidar')
@@ -31,10 +33,17 @@ def add_lidars(root, prefixed_frames=False):
 
 
 def lidar_nodes():
-    return [Node(package='ros_gz_bridge', executable='parameter_bridge', arguments=[
-        '/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
-        '/scan_low@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+    config = os.path.join(get_package_share_directory('omron_amr_simulation'), 'config', 'lidar_filter.yaml')
+    nodes = [Node(package='ros_gz_bridge', executable='parameter_bridge', arguments=[
+        '/sim_lidar/scan_raw@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+        '/sim_lidar/scan_low_raw@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
     ], output='screen')]
+    for topic in ('scan', 'scan_low'):
+        nodes.append(Node(package='laser_filters', executable='scan_to_scan_filter_chain',
+                          name=f'sim_{topic}_filter', parameters=[config, {'use_sim_time': True}],
+                          remappings=[('scan', f'/sim_lidar/{topic}_raw'), ('scan_filtered', f'/{topic}')],
+                          output='screen'))
+    return nodes
 
 
 def add_ground_truth(root):

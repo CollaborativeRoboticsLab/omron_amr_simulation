@@ -4,10 +4,11 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import pytest
+import yaml
 
 
 PACKAGE = Path(__file__).resolve().parents[1]
-SPEC = importlib.util.spec_from_file_location('preview', PACKAGE / 'launch' / 'preview.launch.py')
+SPEC = importlib.util.spec_from_file_location('preview', PACKAGE / 'launch' / 'simulation.launch.py')
 preview = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(preview)
 DRIVE_SPEC = importlib.util.spec_from_file_location('base_drive', PACKAGE / 'launch' / 'base_drive.py')
@@ -38,10 +39,15 @@ def test_lidar_configuration():
     base_drive.add_lidars(root, prefixed_frames=True)
     for topic, frame, count in (('scan', 'laser_frame', '481'), ('scan_low', 'laser_frame_low', '253')):
         sensor = root.find(f"gazebo/sensor[@name='sim_{topic}']")
-        assert sensor.findtext('topic') == f'/{topic}'
+        assert sensor.findtext('topic') == f'/sim_lidar/{topic}_raw'
         assert sensor.findtext('gz_frame_id') == frame
         assert sensor.findtext('lidar/scan/horizontal/samples') == count
         assert root.find(f"joint[@name='sim_{frame}_alias']/parent").get('link') == f'ld250_{frame}'
+    with (PACKAGE / 'config' / 'lidar_filter.yaml').open() as config_file:
+        config = yaml.safe_load(config_file)['/**']['ros__parameters']['filter1']
+    assert config['type'] == 'laser_filters/LaserScanBoxFilter'
+    assert config['params']['box_frame'] == 'base_link'
+    assert config['params']['invert'] is False
 
 
 def test_ground_truth_configuration():

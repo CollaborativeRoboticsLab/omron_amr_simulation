@@ -3,7 +3,7 @@ project(omron_amr_simulation)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch models urdf worlds DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY config launch models urdf worlds DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/sim_base_command.py DESTINATION lib/${PROJECT_NAME})
 install(PROGRAMS scripts/sim_docking.py DESTINATION lib/${PROJECT_NAME})
 

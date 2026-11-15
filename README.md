@@ -15,7 +15,7 @@ source /opt/ros/jazzy/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --packages-up-to omron_amr_simulation
 source install/setup.bash
-ros2 launch omron_amr_simulation preview.launch.py model:=ld250
+ros2 launch omron_amr_simulation simulation.launch.py model:=ld250
 ```
 
 Use `model:=ld90` for the LD90, and `gui:=false` for a headless server. The
@@ -28,7 +28,7 @@ For a warehouse environment, use:
 
 ```bash
 source install/setup.bash
-ros2 launch omron_amr_simulation preview.launch.py model:=ld250 world:=warehouse
+ros2 launch omron_amr_simulation simulation.launch.py model:=ld250 world:=warehouse
 ```
 
 The local warehouse layout is approximately 28 by 21 meters and adapts assets
@@ -53,7 +53,7 @@ disabled.
 For a simple grasp-testing environment, launch the separate world:
 
 ```bash
-ros2 launch omron_amr_simulation preview.launch.py model:=ld250 world:=grasp_test
+ros2 launch omron_amr_simulation simulation.launch.py model:=ld250 world:=grasp_test
 ```
 
 The grasp-test world includes five worktables at `x=1.3`, with `y` positions
@@ -81,7 +81,7 @@ suction simulation mechanism.
 ## Experimental LD250 drive
 
 ```bash
-ros2 launch omron_amr_simulation preview.launch.py model:=ld250 drive:=true
+ros2 launch omron_amr_simulation simulation.launch.py model:=ld250 drive:=true
 ```
 
 This opt-in mode accepts `geometry_msgs/msg/Twist` on `cmd_vel`, publishes
@@ -95,9 +95,29 @@ watchdog as a safety system for hardware.
 The wheel positions, wheel radius, chassis collision shape, and support contacts
 are approximations, not measured LD250 parameters. Odometry is wheel-based and
 can differ from the actual pose due to slip. Only LD250 is supported in this
-mode. Laser scans, hardware status, faults, docking and Nav2 are not simulated
-or validated. Run only one robot per world and do not start a real driver or
+mode. Hardware status and faults are not simulated. Run only one robot per world and do not start a real driver or
 another publisher of `odom -> base_link` alongside the simulation.
+
+## Experimental Nav2 and SLAM
+
+```bash
+ros2 launch omron_amr_simulation nav2.launch.py gui:=false
+```
+
+This starts the LD250 with drive and lidar, SLAM Toolbox, and the existing
+`amr_nav2` navigation stack using simulated time. The default world is
+`warehouse`; its Fuel assets may need to be downloaded on first use. Set
+`world`, `x`, `y`, `yaw`, or `params_file` to customize the launch. To use an
+already-running compatible simulator, pass `start_sim:=false`; do not launch
+two robot or clock publishers in the same ROS domain. This entry point uses
+SLAM and does not provide map-server/AMCL localization.
+
+The simulated scans pass through a body-frame box filter to remove returns
+inside the approximate LD250 chassis. Two short warehouse navigation goals,
+including a turn, succeeded in testing. Close external obstacles, costmaps and
+longer routes still need validation and tuning; the empty world has few
+features for SLAM. Do not rely on this setup for obstacle avoidance or hardware
+safety.
 
 
 - The existing `amr_description` Xacros provide the chassis geometry and, for
@@ -105,8 +125,7 @@ another publisher of `odom -> base_link` alongside the simulation.
   4.07 kg body masses and inertias need validation; LD90's visual and collision
   specifications.
 - Replace the experimental drive geometry, masses, inertias and contact
-  parameters with measured values and add Gazebo lidar sensors for `scan` and
-  using Nav2 with `use_sim_time`.
+  parameters with measured values and validate the lidar and Nav2 configuration.
 - `amr_core` interfaces use libaria to connect to the Omron robot server and
   request hardware data; Gazebo does not implement that network protocol. They
   cannot directly drive this Gazebo world. A simulated ROS-facing adapter can
