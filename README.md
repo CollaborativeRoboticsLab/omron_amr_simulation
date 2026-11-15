@@ -74,28 +74,43 @@ adds that model directory to Gazebo's resource path. The default empty world
 contains no objects; the grasp-test tables and their objects are separate
 from the warehouse rack.
 
-The robot remains static in this preview, so it cannot yet drive, close its
-gripper, or pick up the objects. Grasping requires robot and gripper dynamics,
+The robot remains static in the default preview. Grasping requires robot and gripper dynamics,
 controllers, and validated contact behavior; vacuum gripping also needs a
 suction simulation mechanism.
 
-## Reuse and remaining work
+## Experimental LD250 drive
+
+```bash
+ros2 launch omron_amr_simulation preview.launch.py model:=ld250 drive:=true
+```
+
+This opt-in mode accepts `geometry_msgs/msg/Twist` on `cmd_vel`, publishes
+`nav_msgs/msg/Odometry` on `odom` and the `odom -> base_link` transform, and
+accepts `std_msgs/msg/Empty` on `stop`. Commands are limited to -0.2 to 1.0 m/s
+and +/-60 degrees/s. The adapter sends zero velocity when commands are older
+than 0.2 seconds. It must remain running: Gazebo's drive plugin does not itself
+provide the adapter's watchdog if that process crashes. Never use this simulated
+watchdog as a safety system for hardware.
+
+The wheel positions, wheel radius, chassis collision shape, and support contacts
+are approximations, not measured LD250 parameters. Odometry is wheel-based and
+can differ from the actual pose due to slip. Only LD250 is supported in this
+mode. Laser scans, hardware status, faults, docking and Nav2 are not simulated
+or validated. Run only one robot per world and do not start a real driver or
+another publisher of `odom -> base_link` alongside the simulation.
+
 
 - The existing `amr_description` Xacros provide the chassis geometry and, for
   LD250, laser frames. They contain no driven wheel joints or sensors. Their
   4.07 kg body masses and inertias need validation; LD90's visual and collision
-  meshes also have different vertical origins. Do not treat them as physical
   specifications.
-- Add measured wheel geometry, joints, masses, contact parameters and a drive
-  system, plus Gazebo lidar sensors. Bridge or adapt the ROS interfaces used by
-  the LD250 configuration: `cmd_vel`, `odom`, `odom -> base_link`, `scan`, and
-  `scan_low`. Validate frame conventions, limits, watchdog behavior and timing
-  before using Nav2 with `use_sim_time`.
+- Replace the experimental drive geometry, masses, inertias and contact
+  parameters with measured values and add Gazebo lidar sensors for `scan` and
+  using Nav2 with `use_sim_time`.
 - `amr_core` interfaces use libaria to connect to the Omron robot server and
   request hardware data; Gazebo does not implement that network protocol. They
   cannot directly drive this Gazebo world. A simulated ROS-facing adapter can
   preserve their topic contracts, or a separately implemented protocol emulator
-  could exercise the real driver. Neither approach currently provides the full
   status, fault, docking, and other hardware services.
 - Do not launch the existing hardware bringup against a reachable robot for a
   simulation test. The preview intentionally avoids `amr_core` entirely.

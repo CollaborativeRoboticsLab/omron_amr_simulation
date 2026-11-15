@@ -3,11 +3,64 @@ import importlib.util
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
+import pytest
+
 
 PACKAGE = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location('preview', PACKAGE / 'launch' / 'preview.launch.py')
 preview = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(preview)
+DRIVE_SPEC = importlib.util.spec_from_file_location('base_drive', PACKAGE / 'launch' / 'base_drive.py')
+base_drive = importlib.util.module_from_spec(DRIVE_SPEC)
+DRIVE_SPEC.loader.exec_module(base_drive)
+
+
+def test_drive_geometry():
+    root = ET.fromstring('<robot name="test"><link name="base_link"/><link name="main_body"><collision/></link></robot>')
+    base_drive.add_drive_geometry(root)
+    assert len(root.findall("link[@name='main_body']/collision")) == 3
+    for side in ('left', 'right'):
+        joint = root.find(f"joint[@name='sim_{side}_wheel_joint']")
+        assert joint.get('type') == 'continuous'
+        assert joint.find('parent').get('link') == 'base_link'
+        assert joint.find('axis').get('xyz') == '0 1 0'
+        assert root.find(f"link[@name='sim_{side}_wheel']/collision/geometry/cylinder").get('radius') == '0.1'
+
+
+def test_drive_geometry_with_prefixed_body():
+    root = ET.fromstring('<robot name="test"><link name="base_link"/><link name="ld250_main_body"/></robot>')
+    base_drive.add_drive_geometry(root, body_name='ld250_main_body')
+    assert len(root.findall("link[@name='ld250_main_body']/collision")) == 3
+
+
+def test_lidar_configuration():
+    root = ET.fromstring('<robot name="test"><link name="base_link"/></robot>')
+    base_drive.add_lidars(root, prefixed_frames=True)
+    for topic, frame, count in (('scan', 'laser_frame', '481'), ('scan_low', 'laser_frame_low', '253')):
+        sensor = root.find(f"gazebo/sensor[@name='sim_{topic}']")
+        assert sensor.findtext('topic') == f'/{topic}'
+        assert sensor.findtext('gz_frame_id') == frame
+        assert sensor.findtext('lidar/scan/horizontal/samples') == count
+        assert root.find(f"joint[@name='sim_{frame}_alias']/parent").get('link') == f'ld250_{frame}'
+
+
+def test_ground_truth_configuration():
+    root = ET.fromstring('<robot name="test"/>')
+    base_drive.add_ground_truth(root)
+    plugin = root.find("gazebo/plugin[@name='gz::sim::systems::PosePublisher']")
+    assert plugin.findtext('publish_model_pose') == 'true'
+    assert plugin.findtext('publish_link_pose') == 'false'
+    assert plugin.findtext('use_pose_vector_msg') == 'false'
+
+
+def test_dock_geometry():
+    world = ET.fromstring('<world name="test"/>')
+    base_drive.add_dock(world, 1.0, 2.0, 0.0)
+    dock = world.find("model[@name='sim_charging_dock']")
+    assert dock.findtext('static') == 'true'
+    assert [float(value) for value in dock.findtext('pose').split()][:2] == pytest.approx([0.45, 2.0])
+    assert dock.find('link/collision/geometry/box') is not None
+    assert len(base_drive.docking_nodes('ld250', 1.0, 2.0, 0.0)) == 2
 
 
 def included_models(root, prefix):

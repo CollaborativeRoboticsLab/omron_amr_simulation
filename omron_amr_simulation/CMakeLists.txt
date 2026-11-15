@@ -4,10 +4,14 @@ project(omron_amr_simulation)
 find_package(ament_cmake REQUIRED)
 
 install(DIRECTORY launch models urdf worlds DESTINATION share/${PROJECT_NAME})
+install(PROGRAMS scripts/sim_base_command.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/sim_docking.py DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
 	find_package(ament_cmake_pytest REQUIRED)
 	ament_add_pytest_test(test_object_layouts test/test_object_layouts.py)
+	ament_add_pytest_test(test_base_command test/test_base_command.py)
+	ament_add_pytest_test(test_docking test/test_docking.py)
 endif()
 
 ament_package()

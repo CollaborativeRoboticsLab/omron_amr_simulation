@@ -1,4 +1,6 @@
 import copy
+import importlib.util
+import math
 import os
 import random
 import tempfile
@@ -63,6 +65,22 @@ def randomize_grasp_objects(root, seed=None):
 def create_preview(context):
     model = LaunchConfiguration('model').perform(context)
     world_only = evaluate_condition_expression(context, [LaunchConfiguration('world_only')])
+    drive = evaluate_condition_expression(context, [LaunchConfiguration('drive')])
+    lidar = evaluate_condition_expression(context, [LaunchConfiguration('lidar')])
+    render_sensors = evaluate_condition_expression(context, [LaunchConfiguration('render_sensors')])
+    docking = evaluate_condition_expression(context, [LaunchConfiguration('docking')])
+    if docking and not world_only and not drive:
+        raise ValueError('Docking simulation requires drive:=true')
+    if docking:
+        dock_x, dock_y, dock_yaw = (float(LaunchConfiguration(name).perform(context))
+                                     for name in ('dock_x', 'dock_y', 'dock_yaw'))
+        if not all(math.isfinite(value) for value in (dock_x, dock_y, dock_yaw)):
+            raise ValueError('Dock coordinates must be finite')
+    if drive or lidar or docking:
+        spec = importlib.util.spec_from_file_location('base_drive', os.path.join(
+            get_package_share_directory('omron_amr_simulation'), 'launch', 'base_drive.py'))
+        base_drive = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(base_drive)
     world_name = LaunchConfiguration('world').perform(context)
     worlds = {
         'empty': (os.path.join(get_package_share_directory('omron_amr_simulation'), 'worlds', 'empty.sdf'), 'empty'),
@@ -87,7 +105,15 @@ def create_preview(context):
             for plugin in gazebo.findall('plugin'):
                 if plugin.get('filename') == 'libgazebo_ros_control.so':
                     gazebo.remove(plugin)
-        ET.SubElement(ET.SubElement(root, 'gazebo'), 'static').text = 'true'
+        if drive or lidar:
+            if model != 'ld250':
+                raise ValueError('Drive and lidar simulation currently support only ld250')
+        if drive:
+            base_drive.add_drive_geometry(root)
+        else:
+            ET.SubElement(ET.SubElement(root, 'gazebo'), 'static').text = 'true'
+        if lidar:
+            base_drive.add_lidars(root)
         description = ET.tostring(root, encoding='unicode')
         gazebo_root = copy.deepcopy(root)
         for visual in gazebo_root.findall('.//visual'):
@@ -110,11 +136,19 @@ def create_preview(context):
         'warehouse': ('randomize_boxes', 'box_seed', randomize_warehouse_boxes),
         'grasp_test': ('randomize_objects', 'object_seed', randomize_grasp_objects),
     }
-    if world_name in randomizers and evaluate_condition_expression(context, [LaunchConfiguration(randomizers[world_name][0])]):
-        _, seed_argument, randomizer = randomizers[world_name]
+    randomize = world_name in randomizers and evaluate_condition_expression(context, [LaunchConfiguration(randomizers[world_name][0])])
+    if randomize or lidar or render_sensors or docking:
         tree = ET.parse(world)
-        seed = LaunchConfiguration(seed_argument).perform(context)
-        randomizer(tree.getroot(), seed or None)
+        if docking:
+            base_drive.add_dock(tree.getroot().find('world'), dock_x, dock_y, dock_yaw)
+        if lidar or render_sensors:
+            plugin = ET.SubElement(tree.getroot().find('world'), 'plugin', {
+                'filename': 'gz-sim-sensors-system', 'name': 'gz::sim::systems::Sensors'})
+            ET.SubElement(plugin, 'render_engine').text = 'ogre2'
+        if randomize:
+            _, seed_argument, randomizer = randomizers[world_name]
+            seed = LaunchConfiguration(seed_argument).perform(context)
+            randomizer(tree.getroot(), seed or None)
         temporary_world = tempfile.TemporaryDirectory(prefix=f'omron_{world_name}_')
         world = os.path.join(temporary_world.name, f'{world_name}.sdf')
         tree.write(world, encoding='utf-8', xml_declaration=True)
@@ -143,6 +177,12 @@ def create_preview(context):
                             '-x', LaunchConfiguration('x'), '-y', LaunchConfiguration('y'),
                             '-z', LaunchConfiguration('z'), '-Y', LaunchConfiguration('yaw')], output='screen'),
         ])
+        if drive:
+            nodes.extend(base_drive.drive_nodes())
+        if lidar:
+            nodes.extend(base_drive.lidar_nodes())
+        if docking:
+            nodes.extend(base_drive.docking_nodes(model, dock_x, dock_y, dock_yaw))
     return cleanup + nodes
 
 
@@ -150,6 +190,13 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('model', default_value='ld250', description='ld90 or ld250'),
         DeclareLaunchArgument('world_only', default_value='false', description='Start the world without a robot'),
+        DeclareLaunchArgument('drive', default_value='false', description='Enable experimental LD250 drive simulation'),
+        DeclareLaunchArgument('lidar', default_value='false', description='Enable experimental LD250 laser scans'),
+        DeclareLaunchArgument('render_sensors', default_value='false', description='Enable Gazebo rendering sensors in the world'),
+        DeclareLaunchArgument('docking', default_value='false', description='Enable the experimental simulated dock'),
+        DeclareLaunchArgument('dock_x', default_value='0.0', description='Docked robot X position in world coordinates'),
+        DeclareLaunchArgument('dock_y', default_value='0.0', description='Docked robot Y position in world coordinates'),
+        DeclareLaunchArgument('dock_yaw', default_value='0.0', description='Docked robot yaw in radians'),
         DeclareLaunchArgument('world', default_value='empty', description='empty, grasp_test, or warehouse'),
         DeclareLaunchArgument('randomize_boxes', default_value='false', description='Randomize warehouse box positions'),
         DeclareLaunchArgument('box_seed', default_value='', description='Optional seed for warehouse box positions'),
