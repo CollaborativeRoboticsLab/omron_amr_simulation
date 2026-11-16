@@ -62,12 +62,22 @@ def randomize_grasp_objects(root, seed=None):
             item.find('pose').text = pose
 
 
+def add_sensors_system(world, render_engine=False):
+    plugin = ET.SubElement(world, 'plugin', {
+        'filename': 'gz-sim-sensors-system', 'name': 'gz::sim::systems::Sensors',
+    })
+    if render_engine:
+        ET.SubElement(plugin, 'render_engine').text = 'ogre2'
+    return plugin
+
+
 def create_preview(context):
     model = LaunchConfiguration('model').perform(context)
     world_only = evaluate_condition_expression(context, [LaunchConfiguration('world_only')])
     drive = evaluate_condition_expression(context, [LaunchConfiguration('drive')])
     lidar = evaluate_condition_expression(context, [LaunchConfiguration('lidar')])
     render_sensors = evaluate_condition_expression(context, [LaunchConfiguration('render_sensors')])
+    contact_sensors = evaluate_condition_expression(context, [LaunchConfiguration('contact_sensors')])
     docking = evaluate_condition_expression(context, [LaunchConfiguration('docking')])
     if docking and not world_only and not drive:
         raise ValueError('Docking simulation requires drive:=true')
@@ -137,14 +147,12 @@ def create_preview(context):
         'grasp_test': ('randomize_objects', 'object_seed', randomize_grasp_objects),
     }
     randomize = world_name in randomizers and evaluate_condition_expression(context, [LaunchConfiguration(randomizers[world_name][0])])
-    if randomize or lidar or render_sensors or docking:
+    if randomize or lidar or render_sensors or contact_sensors or docking:
         tree = ET.parse(world)
         if docking:
             base_drive.add_dock(tree.getroot().find('world'), dock_x, dock_y, dock_yaw)
-        if lidar or render_sensors:
-            plugin = ET.SubElement(tree.getroot().find('world'), 'plugin', {
-                'filename': 'gz-sim-sensors-system', 'name': 'gz::sim::systems::Sensors'})
-            ET.SubElement(plugin, 'render_engine').text = 'ogre2'
+        if lidar or render_sensors or contact_sensors:
+            add_sensors_system(tree.getroot().find('world'), render_engine=lidar or render_sensors)
         if randomize:
             _, seed_argument, randomizer = randomizers[world_name]
             seed = LaunchConfiguration(seed_argument).perform(context)
@@ -201,6 +209,7 @@ def generate_launch_description():
         DeclareLaunchArgument('drive', default_value='false', description='Enable experimental LD250 drive simulation'),
         DeclareLaunchArgument('lidar', default_value='false', description='Enable experimental LD250 laser scans'),
         DeclareLaunchArgument('render_sensors', default_value='false', description='Enable Gazebo rendering sensors in the world'),
+        DeclareLaunchArgument('contact_sensors', default_value='false', description='Enable Gazebo contact sensors in the world'),
         DeclareLaunchArgument('docking', default_value='false', description='Enable the experimental simulated dock'),
         DeclareLaunchArgument('dock_x', default_value='0.0', description='Docked robot X position in world coordinates'),
         DeclareLaunchArgument('dock_y', default_value='0.0', description='Docked robot Y position in world coordinates'),

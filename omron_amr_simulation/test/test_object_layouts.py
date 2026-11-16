@@ -59,6 +59,13 @@ def test_ground_truth_configuration():
     assert plugin.findtext('use_pose_vector_msg') == 'false'
 
 
+def test_contact_sensors_do_not_require_rendering_engine():
+    world = ET.fromstring('<world name="test"/>')
+    plugin = preview.add_sensors_system(world)
+    assert plugin.get('filename') == 'gz-sim-sensors-system'
+    assert plugin.find('render_engine') is None
+
+
 def test_dock_geometry():
     world = ET.fromstring('<world name="test"/>')
     base_drive.add_dock(world, 1.0, 2.0, 0.0)
